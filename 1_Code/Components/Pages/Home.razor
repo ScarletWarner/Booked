@@ -1,6 +1,71 @@
 ﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Booked.Data
+@inject IDbContextFactory<Booked.Data.BookedContext> DbFactory
+@using Newtonsoft.Json.Linq
 
-<PageTitle>Welcome</PageTitle>
+<PageTitle>Booked</PageTitle>
 
-<h1>Welcome to Booked!</h1>
-<p>Are you a book enthusiast? You've come to the right place. Booked is your one stop shop for selling and buying previously loved books.'</p>
+<h1>Booked</h1>
+
+<p>Are you a book enthusiast? You've come to the right place. Booked is your one stop shop for selling and buying previously loved books.</p>
+
+
+<h2>Find Your Next Favorite Read</h2>
+@if (BookCards == null || !BookCards.Any())
+{
+    <p>Loading books...</p>
+}
+else
+{
+    <div class="book-cards">
+        @foreach (var book in BookCards)
+        {
+            <div class="card">
+                <img src="@book.CoverImageUrl" alt="@book.Title" class="card-img-top" />
+                <div class="card-body">
+                    <h5 class="card-title">@book.Title</h5>
+                    <p class="card-text">Author: @book.Author</p>
+                    <a href="@($"books/details?id={book.Id}")" class="btn btn-primary">Details</a>
+
+                </div>
+            </div>
+        }
+    </div>
+}
+@code {
+
+    private string titleFilter = string.Empty;
+    private List<BookCard> BookCards { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        BookCards = await GetBooksAsync();
+    }
+
+    public async Task<List<BookCard>> GetBooksAsync()
+    {
+        await using var dbContext = DbFactory.CreateDbContext();
+        var query = from book in dbContext.Book
+                    where string.IsNullOrEmpty(titleFilter) || EF.Functions.Like(book.Title, $"%{titleFilter}%")
+                    orderby Guid.NewGuid() // Randomize the order
+                    select new BookCard
+                        {
+                            Id = book.Id, // Assuming `Id` is the primary key
+                            Title = book.Title,
+                            Author = book.Author,
+                            CoverImageUrl = book.CoverURL // Assuming your database has this field
+                        };
+
+        return await query.Take(3).ToListAsync(); // Limit the results to 3
+    }
+
+
+    public class BookCard
+    {
+        public int Id { get; set; } // Include ID to create a link for details page
+        public string Title { get; set; } = string.Empty;
+        public string Author { get; set; } = string.Empty;
+        public string? CoverImageUrl { get; set; }
+    }
+}

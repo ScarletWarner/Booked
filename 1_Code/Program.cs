@@ -5,12 +5,23 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContextFactory<BookedContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("BookedContext") ?? throw new InvalidOperationException("Connection string 'BookedContext' not found.")));
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
+
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
+builder.Services.AddHttpClient();
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -39,6 +50,11 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+// In Startup.cs or Program.cs
+
+ builder.Services.AddHttpClient(); // Add HttpClient service
+
+
 
 var app = builder.Build();
 

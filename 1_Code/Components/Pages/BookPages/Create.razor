@@ -1,8 +1,11 @@
 ﻿@page "/books/create"
 @using Microsoft.EntityFrameworkCore
 @using Booked.Models
+@using Newtonsoft.Json.Linq
 @inject IDbContextFactory<Booked.Data.BookedContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject HttpClient HttpClient
+
 
 <PageTitle>List A Book</PageTitle>
 
@@ -14,26 +17,33 @@
         <EditForm method="post" Model="Book" OnValidSubmit="AddBook" FormName="create" Enhance>
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
+
             <div class="mb-3">
-                <label for="title" class="form-label">Title:</label> 
-                <InputText id="title" @bind-Value="Book.Title" class="form-control" /> 
-                <ValidationMessage For="() => Book.Title" class="text-danger" /> 
-            </div>        
+                <label for="title" class="form-label">Title:</label>
+                <InputText id="title" @bind-Value="Book.Title" class="form-control" />
+                <ValidationMessage For="() => Book.Title" class="text-danger" />
+            </div>
             <div class="mb-3">
-                <label for="author" class="form-label">Author:</label> 
-                <InputText id="author" @bind-Value="Book.Author" class="form-control" /> 
-                <ValidationMessage For="() => Book.Author" class="text-danger" /> 
-            </div>        
+                <label for="author" class="form-label">Author:</label>
+                <InputText id="author" @bind-Value="Book.Author" class="form-control" />
+                <ValidationMessage For="() => Book.Author" class="text-danger" />
+            </div>
             <div class="mb-3">
-                <label for="genre" class="form-label">Genre:</label> 
-                <InputText id="genre" @bind-Value="Book.Genre" class="form-control" /> 
-                <ValidationMessage For="() => Book.Genre" class="text-danger" /> 
-            </div>        
+                <label for="CoverURL" class="form-label">CoverURL:</label>
+                <InputText id="CoverURL" @bind-Value="Book.CoverURL" class="form-control" />
+                <ValidationMessage For="() => Book.CoverURL" class="text-danger" />
+            </div>
             <div class="mb-3">
-                <label for="price" class="form-label">Price:</label> 
-                <InputNumber id="price" @bind-Value="Book.Price" class="form-control" /> 
-                <ValidationMessage For="() => Book.Price" class="text-danger" /> 
-            </div>        
+                <label for="price" class="form-label">Price:</label>
+                <InputNumber id="price" @bind-Value="Book.Price" class="form-control" />
+                <ValidationMessage For="() => Book.Price" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="ISBN" class="form-label">ISBN:</label>
+                <InputText id="ISBN" @bind-Value="Book.ISBN" class="form-control" OnInput="FetchBookFromApi" />
+                <ValidationMessage For="() => Book.ISBN" class="text-danger" />
+            </div>
+
             <button type="submit" class="btn btn-primary">Create</button>
         </EditForm>
     </div>
@@ -47,7 +57,44 @@
     [SupplyParameterFromForm]
     private Book Book { get; set; } = new();
 
-    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private const string ApiEndpointTemplate = "https://openlibrary.org/api/volumes/brief/json/isbn:{0}";
+
+    private async Task FetchBookFromApi(ChangeEventArgs e)
+    {
+        string isbn = e.Value.ToString();
+        if (string.IsNullOrWhiteSpace(isbn))
+        {
+            return;
+        }
+        var endpoint = ApiEndpointTemplate.Replace("{ISBN}", isbn);
+        var client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+        var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        var data = JObject.Parse(json);
+        
+        
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Optionally handle API failure
+            return;
+        }
+
+
+        if (data.TryGetValue("records", out var records) && records.HasValues)
+        {
+            var record = records.First.First;
+
+            Book.Title = (string)record["data"]["title"];
+            Book.Author = (string)record["data"]["authors"]?[0]?["name"] ?? "Unknown Author";
+            Book.CoverURL = (string)record["data"]["cover"]["medium"];
+            // Cover image logic could go here if required
+        }
+    }
+
     private async Task AddBook()
     {
         using var context = DbFactory.CreateDbContext();

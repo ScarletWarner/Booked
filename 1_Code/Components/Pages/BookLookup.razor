@@ -1,0 +1,111 @@
+﻿@page "/create"
+@using Booked.Models
+@using Newtonsoft.Json.Linq
+@inject HttpClient HttpClient
+@inject IDbContextFactory<Booked.Data.BookedContext> DbFactory
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager NavigationManager
+
+
+<PageTitle>List A Book</PageTitle>
+
+<h1>Lookup a Book</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="Book" OnValidSubmit="FetchBookFromApi" FormName="lookupForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="ISBN" class="form-label">ISBN:</label>
+                <InputText id="ISBN" @bind-Value="Book.ISBN" class="form-control" />
+                <ValidationMessage For="() => Book.ISBN" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="price" class="form-label">Price:</label>
+                <InputNumber id="price" @bind-Value="Book.Price" class="form-control" />
+                <ValidationMessage For="() => Book.Price" class="text-danger" />
+            </div>
+            <button type="submit" class="btn btn-primary">@ButtonText</button>
+
+        </EditForm>
+    </div>
+
+    @if (BookDetails != null)
+    {
+        <div class="mt-4">
+            <h3>Book Details:</h3>
+            <p><strong>Title:</strong> @BookDetails.Title </p>
+            <p><strong>Author:</strong> @BookDetails.Author</p>
+            <img src="@BookDetails.CoverURL" alt="Book Cover" style="max-width: 250px;" />
+        </div>
+    }
+</div>
+
+<div>
+    <a href="/booklist
+">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Book Book { get; set; } = new();
+    public Book BookDetails { get; set; }
+
+    public string ButtonText = "List Book";
+
+    private async Task FetchBookFromApi()
+    {
+        if (string.IsNullOrWhiteSpace(Book.ISBN))
+        {
+            Console.WriteLine("ISBN is empty or null.");
+            return;
+        }
+
+        var apiUrl = $"https://openlibrary.org/api/volumes/brief/json/isbn:{Book.ISBN}";
+        Console.WriteLine($"API URL: {apiUrl}");
+
+        var client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+        var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        var data = JObject.Parse(json);
+
+        var isbnKey = data.Properties().FirstOrDefault()?.Name;
+        Console.WriteLine($"ISBN Key: {isbnKey}");
+
+        if (isbnKey != null && data[isbnKey]?["records"] != null)
+        {
+            JObject records = (JObject)data[isbnKey]["records"];
+            string bookKey = records.Properties().FirstOrDefault()?.Name;
+
+            if (bookKey != null)
+            {
+                Console.WriteLine($"Book Key: {bookKey}");
+                JObject record = (JObject)records[bookKey]["data"];
+
+                BookDetails = new Book
+                    {
+                        Title = (string)record["title"],
+                        Author = (string)record["authors"]?[0]?["name"] ?? "Unknown Author",
+                        CoverURL = (string)record["cover"]["medium"]
+                    };
+
+                Book.Title = BookDetails.Title;
+                Book.Author = BookDetails.Author;
+                Book.CoverURL = BookDetails.CoverURL;
+                Console.WriteLine($"Book: Title={Book.Title}, Author={Book.Author}, Price={Book.Price}, Cover={Book.CoverURL}");
+                using var context = DbFactory.CreateDbContext();
+                context.Book.Add(Book);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"Book Details: Title={BookDetails.Title}, Author={BookDetails.Author}, Cover={BookDetails.CoverURL}");
+                ButtonText = "Book Listed!";
+            }
+        }
+    }
+
+}

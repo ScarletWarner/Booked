@@ -1,4 +1,4 @@
-﻿@page "/books"
+﻿@page "/managebooks"
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
@@ -9,21 +9,23 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Books</h1>
+<h1>Manage Your Books
+</h1>
 
 <p>
     <input type="search" @bind="titleFilter" @bind:event="oninput" />
 </p>
 
 <p>
-    <a href="books/create">Create New</a>
+    <a href="/create">List New</a>
 </p>
 
 <QuickGrid Class="table" Items="FilteredBooks" Pagination="pagination">
     <PropertyColumn Property="book => book.Title" />
     <PropertyColumn Property="book => book.Author" />
-    <PropertyColumn Property="book => book.Genre" />
     <PropertyColumn Property="book => book.Price" />
+    <PropertyColumn Property="book => book.ISBN" />
+
 
     <TemplateColumn Context="book">
         <a href="@($"books/edit?id={book.Id}")">Edit</a> |
@@ -49,3 +51,4 @@
 
     private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
 }
+        <a href="#"></a>

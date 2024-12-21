@@ -33,14 +33,19 @@ else
                     <ValidationMessage For="() => Book.Author" class="text-danger" />
                 </div>
                 <div class="mb-3">
-                    <label for="genre" class="form-label">Genre:</label>
-                    <InputText id="genre" @bind-Value="Book.Genre" class="form-control" />
-                    <ValidationMessage For="() => Book.Genre" class="text-danger" />
-                </div>
-                <div class="mb-3">
                     <label for="price" class="form-label">Price:</label>
                     <InputNumber id="price" @bind-Value="Book.Price" class="form-control" />
                     <ValidationMessage For="() => Book.Price" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="price" class="form-label">ISBN:</label>
+                    <InputText id="ISBN" @bind-Value="Book.ISBN" class="form-control" />
+                    <ValidationMessage For="() => Book.ISBN" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="CoverURL" class="form-label">Cover URL:</label>
+                    <InputText id="CoverURL" @bind-Value="Book.CoverURL" class="form-control" />
+                    <ValidationMessage For="() => Book.CoverURL" class="text-danger" />
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
             </EditForm>
